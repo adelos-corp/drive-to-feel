@@ -24,8 +24,8 @@
 <button class="hit" style="left:28%;top:69%;width:13%;height:18%" data-tip="SAT ROTARY" aria-label="Cycle SAT rotary" data-action="sat"></button>
 <button class="hit" style="left:43%;top:72%;width:14%;height:18%" data-tip="DIFF ROTARY" aria-label="Cycle differential rotary" data-action="diff"></button>
 <button class="hit" style="left:62%;top:69%;width:13%;height:18%" data-tip="ENG ROTARY" aria-label="Cycle engine rotary" data-action="eng"></button>
-<button class="hit" style="left:23%;top:26%;width:8%;height:25%" data-tip="LEFT PADDLE · DOWN" aria-label="Downshift" data-action="down"></button>
-<button class="hit" style="left:69%;top:26%;width:8%;height:25%" data-tip="RIGHT PADDLE · UP" aria-label="Upshift" data-action="up"></button>
+<button class="hit" style="left:23%;top:26%;width:8%;height:25%" data-tip="LEFT PADDLE · UP" aria-label="Upshift" data-action="up"></button>
+<button class="hit" style="left:69%;top:26%;width:8%;height:25%" data-tip="RIGHT PADDLE · DOWN" aria-label="Downshift" data-action="down"></button>
 </div><div class="footer"><span><b>CLICK</b> controls · <b>KEYS</b> ↑ / ↓ to shift</span><span>Audio starts after <b>IGNITION</b></span></div></section>
 <aside class="panel"><div class="full"><div class="eyebrow">Gear selection</div><div class="gearline"><div class="gear"><small>CURRENT GEAR</small><span id="gear">N</span></div><div class="speed"><small>SIMULATED SPEED</small><span id="speed">0</span> <span style="font-size:11px;color:var(--muted)">KM/H</span></div></div></div>
 <div class="full"><div class="rpm-number"><span>ENGINE RPM</span><strong><span id="rpm">1,200</span> <span style="font-size:10px">RPM</span></strong></div><div class="leds" id="leds"></div><div class="smallstat" style="margin-top:7px"><span>IDLE</span><span>15,000 RPM LIMIT</span></div></div>
@@ -99,5 +99,6 @@ function tick(now){
  }
  render();audioUpdate();requestAnimationFrame(tick)
 };
+requestAnimationFrame(tick);
 })();
 </script></body></html>
