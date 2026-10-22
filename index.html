@@ -116,7 +116,9 @@ function tick(now){
    const coupledRPM=idleRPM+(speed/Math.max(1,gearRedlineSpeed))*(maxRPM-idleRPM);
    const freeRevRPM=idleRPM+load*(maxRPM-idleRPM)*mapPower*ersBoost;
    const targetRPM=Math.max(idleRPM,Math.min(maxRPM,Math.max(coupledRPM,Math.min(freeRevRPM,coupledRPM+1800))));
-   rpm+=(targetRPM-rpm)*Math.min(1,dt*(load>.02?4:5));
+   // RPM response is deliberately fierce in first, then progressively more measured in taller gears.
+   const rpmResponseByGear=[0,18,13,10,8,6.5,5.3,4.4,3.7];
+   rpm+=(targetRPM-rpm)*Math.min(1,dt*(load>.02?rpmResponseByGear[gear]:5));
   }else{
    speed=0;
    const freeRevRPM=ignition?idleRPM+load*(maxRPM-idleRPM)*mapPower*ersBoost:0;
