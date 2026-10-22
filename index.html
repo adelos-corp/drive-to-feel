@@ -56,8 +56,9 @@ function shift(up){
  if(up){
   if(gear>=8){setMessage('Already in eighth gear.');clickSound(180);return}
   const old=gear;gear++;
-  // Shift durations vary by gear: lower gears have a slightly longer interruption.
-  const upshiftMs=[0,92,82,73,66,60,55,51,48];
+  // Fast, tightly stacked early upshifts; each higher gear takes progressively longer.
+  // These are simulated torque-interruption durations, not literal gearbox actuator times.
+  const upshiftMs=[0,42,48,56,68,82,100,122,148];
   shiftCutUntil=performance.now()+upshiftMs[gear];shiftDirection='up';
   if(old===0){rpm=Math.max(2500,Math.min(6500,rpm+900));setMessage('First gear engaged · clutch bite.')}
   else{rpm=Math.max(idleRPM,Math.min(maxRPM,rpm*ratios[gear]/ratios[old]));setMessage('Upshift · '+old+' → '+gear+' · '+upshiftMs[gear]+' ms shift.')}
@@ -65,7 +66,8 @@ function shift(up){
  }else{
   if(gear===0){setMessage('Already in neutral.');clickSound(180);return}
   const old=gear;gear--;
-  const downshiftMs=[0,38,42,46,50,55,61,68,76];
+  // Downshifts also lengthen gradually toward the upper gears, while remaining immediately selectable.
+  const downshiftMs=[0,34,38,43,49,57,67,80,96];
   shiftCutUntil=performance.now()+downshiftMs[old];shiftDirection='down';
   if(gear===0){setMessage('Neutral selected.')}
   else{
