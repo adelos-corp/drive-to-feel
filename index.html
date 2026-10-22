@@ -79,7 +79,7 @@ function tick(now){
    const drsMultiplier=drs?1.07:1;
    const speedLimit=Math.min(limiter?80:405,gearRedlineSpeed*drsMultiplier);
    const effectivePower=mapPower*ersBoost*(drs?1.12:1);
-   const acceleration=(8.5+load*28)*effectivePower*(1-speed/Math.max(1,speedLimit))-(throttle<2?(4+eng*1.3):0);
+   const acceleration=load*38*effectivePower*Math.max(0,1-speed/Math.max(1,speedLimit))-(4+eng*1.3+speed*.025);
    speed=Math.max(0,Math.min(speedLimit,speed+acceleration*dt));
    // Tie engine speed to road speed and selected gear, rather than letting unrelated RPM/speed formulas drift apart.
    const coupledRPM=idleRPM+(speed/Math.max(1,gearRedlineSpeed))*(maxRPM-idleRPM);
@@ -97,8 +97,9 @@ function tick(now){
  }else{
   rpm=Math.max(0,rpm-dt*8000);speed=Math.max(0,speed-dt*30);drs=false;
  }
- render();audioUpdate();requestAnimationFrame(tick)
+ render();audioUpdate()
 };
-requestAnimationFrame(tick);
+// A fixed-rate simulation clock keeps the instrument updating even when animation frames are throttled.
+setInterval(()=>tick(performance.now()),50);
 })();
 </script></body></html>
