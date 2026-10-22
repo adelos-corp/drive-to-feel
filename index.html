@@ -40,7 +40,7 @@
 <script>
 (()=> {
 const $=id=>document.getElementById(id);const maxRPM=15000,idleRPM=1200,ratios=[0,3.15,2.45,1.95,1.60,1.36,1.18,1.04,0.92];
-let ignition=false,audioOn=false,gear=0,rpm=idleRPM,throttle=0,speed=0,bb=55,phase=1,engineMap=0,drs=false,limiter=false,pit=false,last=performance.now(),modeIndex=0,ers=1,diff=50,sat=3,eng=2;
+let ignition=false,audioOn=false,gear=0,rpm=idleRPM,throttle=0,speed=0,bb=55,phase=1,engineMap=0,drs=false,limiter=false,pit=false,last=performance.now(),modeIndex=0,ers=1,diff=50,sat=3,eng=2,shiftCutUntil=0,shiftDirection='';
 let ctx=null,master=null,osc1=null,osc2=null,filter=null,engineGain=null,noiseGain=null,noiseSource=null,noiseFilter=null,noiseBuffer=null;let rotaries={race:0,sat:3,diff:50,eng:2};
 const ersNames=['OFF','CHARGE','DEPLOY','OVERTAKE'];const modes=['RACE','HOTLAP','CHARGE','WET'];const fmt=n=>Math.round(n).toLocaleString('en-US');
 for(let i=0;i<15;i++){let e=document.createElement('span');e.className='led';$('leds').appendChild(e)}
@@ -51,7 +51,34 @@ function audioUpdate(){if(!ctx)return;let f=ignition?Math.max(28,rpm/60*10):0;os
 function clickSound(freq=900,dur=.045){if(!ctx||!audioOn)return;let o=ctx.createOscillator(),g=ctx.createGain();o.type='square';o.frequency.value=freq;g.gain.setValueAtTime(.055,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+dur);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+dur)}
 function shiftSound(up){if(!ctx||!audioOn)return;let now=ctx.currentTime,g=ctx.createGain(),o=ctx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(up?170:240,now);o.frequency.exponentialRampToValueAtTime(up?65:120,now+.09);g.gain.setValueAtTime(.0001,now);g.gain.linearRampToValueAtTime(.18,now+.008);g.gain.exponentialRampToValueAtTime(.0001,now+.13);o.connect(g);g.connect(master);o.start(now);o.stop(now+.14);clickSound(up?360:540,.035)}
 function toggleIgnition(){if(!ignition){ignition=true;gear=0;rpm=idleRPM;setMessage('Engine started. Apply throttle, engage first gear, and work up through the ratios.');if(audioOn){initAudio();ctx.resume();clickSound(110,.18)}}else{ignition=false;throttle=0;gear=0;rpm=0;speed=0;drs=false;setMessage('Engine stopped. The cockpit is quiet again.')}render();audioUpdate()}
-function shift(up){if(!ignition){setMessage('Ignition is off. Start the engine before shifting.');clickSound(240);return}if(up){if(gear>=8){setMessage('Already in eighth gear.');clickSound(180);return}if(gear===0){gear=1;rpm=Math.max(2500,Math.min(6500,rpm+900));setMessage('First gear engaged.')}else{if(rpm>=maxRPM-100){setMessage('Shift now: RPM is at the 15,000 limit.');rpm=Math.max(idleRPM,rpm-700);shiftSound(true);render();audioUpdate();return}let old=gear;gear++;rpm=Math.max(4500,Math.min(maxRPM,rpm*ratios[gear]/ratios[old]));setMessage('Upshift · '+old+' → '+gear+'.')}shiftSound(true)}else{if(gear===0){setMessage('Already in neutral.');clickSound(180);return}if(gear===1){gear=0;setMessage('Neutral selected.')}else{let old=gear;let nextRpm=rpm*ratios[gear-1]/ratios[old];if(nextRpm>maxRPM){setMessage('Downshift blocked: it would exceed the 15,000 RPM limit.');clickSound(220);return}gear--;rpm=Math.max(idleRPM,nextRpm);setMessage('Downshift · '+old+' → '+gear+'.')}shiftSound(false)}render();audioUpdate()}
+function shift(up){
+ if(!ignition){setMessage('Ignition is off. Start the engine before shifting.');clickSound(240);return}
+ if(up){
+  if(gear>=8){setMessage('Already in eighth gear.');clickSound(180);return}
+  const old=gear;gear++;
+  // Shift durations vary by gear: lower gears have a slightly longer interruption.
+  const upshiftMs=[0,92,82,73,66,60,55,51,48];
+  shiftCutUntil=performance.now()+upshiftMs[gear];shiftDirection='up';
+  if(old===0){rpm=Math.max(2500,Math.min(6500,rpm+900));setMessage('First gear engaged · clutch bite.')}
+  else{rpm=Math.max(idleRPM,Math.min(maxRPM,rpm*ratios[gear]/ratios[old]));setMessage('Upshift · '+old+' → '+gear+' · '+upshiftMs[gear]+' ms shift.')}
+  shiftSound(true);
+ }else{
+  if(gear===0){setMessage('Already in neutral.');clickSound(180);return}
+  const old=gear;gear--;
+  const downshiftMs=[0,38,42,46,50,55,61,68,76];
+  shiftCutUntil=performance.now()+downshiftMs[old];shiftDirection='down';
+  if(gear===0){setMessage('Neutral selected.')}
+  else{
+   // Never block a requested downshift. RPM is bounded by the simulator's limiter.
+   const matchedRPM=rpm*ratios[gear]/ratios[old];
+   const downshiftBlip=gear===1?1250:850;
+   rpm=Math.min(maxRPM,Math.max(idleRPM,matchedRPM,Math.min(maxRPM,rpm+downshiftBlip)));
+   setMessage('Downshift · '+old+' → '+gear+' · '+downshiftMs[old]+' ms shift.');
+  }
+  shiftSound(false);
+ }
+ render();audioUpdate()
+}
 function setThrottle(v){throttle=Number(v);render();audioUpdate()}
 function action(a,el){if(a==='up'){shift(true);return}if(a==='down'){shift(false);return}
 if(a==='neutral'){gear=0;speed=0;setMessage('Neutral selected. Drivetrain disengaged.');clickSound(650);render();return}
@@ -78,7 +105,7 @@ function tick(now){
    const gearRedlineSpeed=378*(ratios[8]/ratios[gear]);
    const drsMultiplier=drs?1.07:1;
    const speedLimit=Math.min(limiter?80:405,gearRedlineSpeed*drsMultiplier);
-   const effectivePower=mapPower*ersBoost*(drs?1.12:1);
+   const shifting=performance.now()<shiftCutUntil;\n   const effectivePower=mapPower*ersBoost*(drs?1.12:1)*(shifting?0.16:1);
    const acceleration=load*38*effectivePower*Math.max(0,1-speed/Math.max(1,speedLimit))-(4+eng*1.3+speed*.025);
    speed=Math.max(0,Math.min(speedLimit,speed+acceleration*dt));
    // Tie engine speed to road speed and selected gear, rather than letting unrelated RPM/speed formulas drift apart.
